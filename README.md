@@ -1,7 +1,7 @@
 #### Naming
 
 *   Modules which will be embed from **JS** should be named `JS.elm`. They should be stored in `ModuleName/Js.elm`. This module should expose only `main` function which should be a type of `Html` or `Program`.
-*   Modules with complex logic should be split into two modules `ModuleName.elm` and `ModuleName/Internal.elm`. Basically we want to keep the implementation of the module secret. Thus we need to keep public API as small as possible. `ModuleName.elm` would expose only public functions and values so that module could be reused. And `ModuleName/Internal.elm` would expose everything needed for tests. `ModuleName/Internal.elm` could be imported only by `ModuleName.elm`, otherwise the build on Jenkins will fail.
+*   Modules with complex logic should be split into two modules `ModuleName.elm` and `ModuleName/Internal.elm`. Basically we want to keep the implementation of the module secret. Thus we need to keep public API as small as possible. `ModuleName.elm` would expose only public functions and values so that module could be reused. And `ModuleName/Internal.elm` would expose everything needed for tests. `ModuleName/Internal.elm` could be imported only by `ModuleName.elm`
 
 #### Code style
 
@@ -86,69 +86,10 @@ Large `case..of` statements hurts compile time. It might be possible that some o
 
 #### Ports
 
-The communication with **JS** is done via ports. There should be only one file which describes ports. The file is located in `app/elm/Shared/Js/Ports.elm`. **Elm** communicates with **JS** by sending/receiving data. Data has following format.
+The communication with **JS** is done via ports. There should be only one file which describes ports. **Elm** communicates with **JS** by sending/receiving data. Data has following format.
 
 *   `tag` - **String**, which is the message name for **Elm**/**JS** to identify the appropriate action.
 *   `data` - **Json**, which describes the data passed via ports.
-
-Module `Ports.elm` exposes two function `msgToJs` and `msgFromJs`. Which could be used to pass/receive data from **Elm**/**JS**.
-
-Each module which wants to communicate with **JS** should defined it's functions/messages for the communication. E.g.
-
-    import Ports as Ports
-    import Effects.MsgFromJs as MsgFromJs
-    import Extra.Platform.Cmd as Cmd
-
-    moduleName : String
-    moduleName =
-        "My.Module.Name"
-
-    type Msg
-        = NoOp
-        | MsgFromJs (List Msg)
-        | LogError String
-
-    update : Msg -> Model -> ( Model, Cmd Msg )
-    update msg model =
-        case msg of
-            NoOp ->
-                ( model, Cmd.none )
-
-            MsgFromJs msgsFromJs ->
-                ( model
-                , Cmd.dispatchList msgsFromJs
-                )
-
-            LogError error ->
-                ( model
-                , Ports.reportToSentry error
-                )
-
-    type MsgForJs
-      = ValueChanged String
-
-    sendMsgToJs : MsgForJs -> Cmd msg
-    sendMsgToJs msg =
-        case msg of
-            ValueChanged value ->
-                Ports.msgToJs
-                    { tag = "ValueChanged"
-                    , data = Encode.string value
-                    }
-
-    subscriptions : Sub Msg
-    subscriptions =
-        Ports.msgFromJs (MsgFromJs.decodeJsData MsgFromJs LogError msgFromJsEffects)
-
-    msgFromJsEffects : MsgFromJs.Effects Msg
-    msgFromJsEffects =
-        MsgFromJs.subscribe moduleName
-            [ ( "SomeMsgFromJs"
-              , MsgFromJs.succeed NoOp
-              )
-            ]
-
-Where `sendMsgToJs` is a command which could be used in **update** phase.
 
 #### Tests
 
